@@ -1,7 +1,6 @@
 import os
 from flask import Flask
 from flask_cors import CORS
-
 from routes.auth import auth_bp
 from routes.blog import blog_bp
 from routes.chat import chat_bp

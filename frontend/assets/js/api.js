@@ -1,4 +1,4 @@
-const API_URL = "https://your-backend.up.railway.app"; // ganti ini
+const API_URL = "https://data-production-90d4.up.railway.app";
 
 export async function api(path, method = "GET", data = null) {
   try {

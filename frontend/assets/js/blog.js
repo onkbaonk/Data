@@ -1,164 +1,43 @@
-let EDIT_POST_ID = null;
 import { api } from "./api.js";
 
 export async function loadBlog() {
-  const posts = await api("/blog/all");
+  try {
+    const posts = await api("/blog/all");
 
-  const container = document.getElementById("blogList");
-  container.innerHTML = "";
+    const container = document.getElementById("blogList");
+    if (!container) return;
 
-  posts.forEach(p => {
-    const el = document.createElement("div");
-    el.innerHTML = `<h3>${p.title}</h3><p>${p.content}</p>`;
-    container.appendChild(el);
-  });
+    container.innerHTML = "";
+
+    if (!posts || posts.length === 0) {
+      container.innerHTML = "<p class='text-center opacity-50'>Belum ada postingan.</p>";
+      return;
+    }
+
+    posts.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "glass p-4 rounded-xl mb-3";
+
+      el.innerHTML = `
+        <h3 class="font-bold text-blue-400">${p.title || "No title"}</h3>
+        <p class="text-sm opacity-80 mt-1">${p.content || ""}</p>
+      `;
+
+      container.appendChild(el);
+    });
+
+  } catch (err) {
+    console.error("Gagal load blog:", err);
+  }
 }
 
 export async function addBlog(title, content) {
-  await api("/blog/add", "POST", { title, content });
-  loadBlog();
-}
-async function refreshBlog() {
-    if (CURRENT_USER === "guest") {
-        document.getElementById('blog-feed').innerHTML = "<div class='glass p-10 text-center rounded-2xl opacity-50 text-sm'>Silahkan login untuk akses database.</div>";
-        return;
-    }
-    try {
-        const posts = await getGithubFile('blog_data.json');
-        document.getElementById('blog-feed').innerHTML = posts.content.slice().reverse().map(p => {
-            const safeTitle = p.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const safeContent = p.content.replace(/\n/g, '<br>').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            
-            const likes = p.reactions ? Object.values(p.reactions).filter(v => v === 'like').length : 0;
-            const dislikes = p.reactions ? Object.values(p.reactions).filter(v => v === 'dislike').length : 0;
-
-            return `
-            <div class="glass p-5 rounded-2xl hover:border-blue-500/30 transition-all relative group">
-            <button onclick="prepareEdit(${p.id})" class="text-blue-500 opacity-40 hover:opacity-100 p-2 z-20">✏️</button>
-            <button onclick="deletePost(${p.id})" class="text-red-500 opacity-40 hover:opacity-100 p-2 z-20">🗑️</button>
-                <div class="cursor-pointer" onclick="viewPost('${safeTitle}', '${safeContent}', ${p.id})">
-                    <h3 class="font-bold text-blue-400 pr-8"># ${p.title}</h3>
-                    <p class="text-xs opacity-70 mt-2 leading-relaxed line-clamp-3">${p.content}</p>
-                </div>
-                <div class="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
-                    <button onclick="handleReaction(${p.id}, 'like')" class="flex items-center gap-1 text-[10px] bg-white/5 px-2 py-1 rounded-full border border-white/5">👍 ${likes}</button>
-                    <button onclick="handleReaction(${p.id}, 'dislike')" class="flex items-center gap-1 text-[10px] bg-white/5 px-2 py-1 rounded-full border border-white/5">👎 ${dislikes}</button>
-                    <div class="ml-auto opacity-40 text-[9px]">👤 ${p.author.toUpperCase()}</div>
-                </div>
-            </div>`;
-        }).join('');
-    } catch (e) { console.error(e); }
-}
-async function submitPost() {
-    const t = document.getElementById('postTitle').value;
-    const c = document.getElementById('postContent').value;
-    const cat = document.getElementById('postCategory').value; // Ambil kategori
-    
-    if(!t || !c) return alert("Isi judul & konten!");
-    
-    const btn = document.getElementById('btnSubmitPost');
-    btn.innerText = "Processing...";
-    
-    try {
-        const f = await getGithubFile('blog_data.json');
-        f.content.push({ 
-            id: Date.now(), 
-            title: t, 
-            content: c, 
-            category: cat, // Simpan kategori ke JSON
-            author: CURRENT_USER, 
-            date: new Date().toISOString().split('T')[0] 
-        });
-        
-        await updateGithubFile('blog_data.json', f.content, f.sha, "New Post with Category");
-        closeModal('postModal');
-        refreshBlog(); // Refresh feed
-    } catch(e) { alert("Gagal!"); }
-    btn.innerText = "Terbitkan";
-}
-async function prepareEdit(postId) {
-    try {
-        const file = await getGithubFile('blog_data.json');
-        const post = file.content.find(p => p.id === postId);
-        
-        if (!post) return alert("Postingan tidak ditemukan!");
-
-        // Isi field di modal dengan data lama
-        document.getElementById('postTitle').value = post.title;
-        document.getElementById('postContent').value = post.content;
-        document.getElementById('postCategory').value = post.category || "Umum";
-        
-        // Ubah tampilan modal sedikit agar user tahu ini sedang Edit
-        document.querySelector('#postModal h2').innerText = "✏️ Edit Postingan";
-        document.getElementById('btnSubmitPost').innerText = "Simpan Perubahan";
-        
-        // Ganti fungsi onclick tombol terbitkan sementara
-        document.getElementById('btnSubmitPost').onclick = submitEdit;
-        
-        EDIT_POST_ID = postId;
-        openModal('postModal');
-    } catch (e) {
-        console.error(e);
-    }
-}
-async function submitEdit() {
-    const t = document.getElementById('postTitle').value;
-    const c = document.getElementById('postContent').value;
-    const cat = document.getElementById('postCategory').value;
-    
-    if(!t || !c) return alert("Judul & konten tidak boleh kosong!");
-    
-    const btn = document.getElementById('btnSubmitPost');
-    btn.innerText = "Saving...";
-    
-    try {
-        const f = await getGithubFile('blog_data.json');
-        const idx = f.content.findIndex(p => p.id === EDIT_POST_ID);
-        
-        if (idx !== -1) {
-            // Update data tanpa mengubah ID, Author, atau Tanggal asli
-            f.content[idx].title = t;
-            f.content[idx].content = c;
-            f.content[idx].category = cat;
-            // Opsional: tambahkan tag (edited) atau update tanggal edit
-            f.content[idx].lastEdit = new Date().toISOString(); 
-        }
-
-        await updateGithubFile('blog_data.json', f.content, f.sha, `Edit post ID: ${EDIT_POST_ID}`);
-        
-        // Kembalikan modal ke kondisi awal (untuk posting baru)
-        resetPostModal();
-        closeModal('postModal');
-        refreshBlog();
-    } catch(e) {
-        alert("Gagal menyimpan perubahan!");
-    }
-    btn.innerText = "Terbitkan";
-}
-async function deletePost(postId) {
-    if (!confirm("Hapus postingan ini secara permanen?")) return;
-
-    try {
-        const file = await getGithubFile('blog_data.json');
-
-        const updatedPosts = file.content.filter(post => post.id !== postId);
-
-        await updateGithubFile(
-            'blog_data.json',
-            updatedPosts,
-            file.sha,
-            `Delete post ID: ${postId}`
-        );
-
-        alert("Postingan berhasil dihapus!");
-
-        setTimeout(() => {
-            refreshBlog();
-        }, 500);
-
-    } catch (e) {
-        alert("Gagal menghapus postingan.");
-    }
+  try {
+    await api("/blog/add", "POST", { title, content });
+    loadBlog();
+  } catch (err) {
+    console.error("Gagal tambah blog:", err);
+  }
 }
 function viewPost(title, content, postId) {
     document.getElementById('viewTitle').innerText = title;
@@ -269,4 +148,35 @@ async function addComment() {
         input.value = "";
         renderComments(postId);
     } catch (e) { alert("Gagal!"); }
+}
+function filterBlog() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const posts = document.querySelectorAll('#blog-feed > div'); // Mengambil semua kartu postingan
+
+    posts.forEach(post => {
+        // Cari teks judul di dalam kartu (biasanya tag h3)
+        const title = post.querySelector('h3').innerText.toLowerCase();
+        
+        if (title.includes(query)) {
+            post.style.display = "block"; // Tampilkan jika cocok
+        } else {
+            post.style.display = "none";  // Sembunyikan jika tidak cocok
+        }
+    });
+
+    // Tampilkan pesan jika tidak ada hasil
+    const existingNoResult = document.getElementById('no-search-result');
+    const visiblePosts = Array.from(posts).filter(p => p.style.display !== "none").length;
+
+    if (visiblePosts === 0) {
+        if (!existingNoResult) {
+            const msg = document.createElement('p');
+            msg.id = 'no-search-result';
+            msg.className = 'text-center opacity-40 text-xs py-10';
+            msg.innerText = "Postingan tidak ditemukan.";
+            document.getElementById('blog-feed').appendChild(msg);
+        }
+    } else {
+        if (existingNoResult) existingNoResult.remove();
+    }
 }
