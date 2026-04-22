@@ -1,17 +1,18 @@
 import { api } from "./api.js";
 
 export async function login(username) {
-  const res = await api("/auth/login", "POST", { username });
+  try {
+    const res = await api("/auth/login", "POST", { username });
 
-  if (res.error) {
-    alert("Login gagal: " + res.error);
-    return;
+    if (res && res.username) {
+      localStorage.setItem("user", JSON.stringify(res));
+      alert("Login berhasil!");
+      location.reload();
+    } else {
+      alert("Login gagal!");
+    }
+
+  } catch (err) {
+    console.error("Login error:", err);
   }
-
-  localStorage.setItem("user", JSON.stringify(res.user));
-
-  // update UI
-  document.getElementById("usernameDisplay").innerText = res.user.username;
-
-  console.log("Login sukses:", res.user);
 }

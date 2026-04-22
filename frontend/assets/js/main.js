@@ -1,15 +1,6 @@
 import { login } from "./auth.js";
 import { loadBlog } from "./blog.js";
 
-// Modal
-function openModal(id) {
-  document.getElementById(id).style.display = "flex";
-}
-
-function closeModal(id) {
-  document.getElementById(id).style.display = "none";
-}
-
 // Tab navigation
 async function switchTab(tabName) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
@@ -27,23 +18,29 @@ async function switchTab(tabName) {
     }
   });
 
-  // 🔥 FIX: pakai API
   if (tabName === "blog") await loadBlog();
 }
 
 // Init
 window.onload = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  setTimeout(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
 
-  if (user) {
-    document.getElementById("usernameDisplay").innerText = user.username;
-  }
+    if (user) {
+      const el = document.getElementById("usernameDisplay");
+      if (el) el.innerText = user.username;
+    }
 
-  document.getElementById("loginBtn").onclick = () => {
-    const username = prompt("Masukkan username:");
-    if (username) login(username);
-  };
+    const btn = document.getElementById("loginBtn");
+    if (btn) {
+      btn.onclick = () => {
+        const username = prompt("Masukkan username:");
+        if (username) login(username);
+      };
+    }
 
-  // 🔥 AUTO LOAD BLOG SAAT MASUK
-  loadBlog();
+    // load awal
+    loadBlog();
+
+  }, 300);
 };
