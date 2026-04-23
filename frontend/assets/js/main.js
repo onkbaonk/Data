@@ -22,25 +22,21 @@ async function switchTab(tabName) {
 }
 
 // Init
-window.onload = () => {
-  setTimeout(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
+window.addEventListener("app-ready", () => {
+  const user = JSON.parse(localStorage.getItem("user"));
 
-    if (user) {
-      const el = document.getElementById("usernameDisplay");
-      if (el) el.innerText = user.username;
-    }
+  if (user) {
+    const el = document.getElementById("usernameDisplay");
+    if (el) el.innerText = user.username;
+  }
 
-    const btn = document.getElementById("loginBtn");
-    if (btn) {
-      btn.onclick = () => {
-        const username = prompt("Masukkan username:");
-        if (username) login(username);
-      };
-    }
+  const btn = document.getElementById("loginBtn");
+  if (btn) {
+    btn.onclick = () => {
+      const username = prompt("Masukkan username:");
+      if (username) login(username);
+    };
+  }
 
-    // load awal
-    loadBlog();
-
-  }, 300);
-};
+  loadBlog();
+});
