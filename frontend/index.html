@@ -23,7 +23,6 @@
             <div id="section-profile" class="tab-content hidden"></div>
         </main>
     </div>
-<script type="module" src="./assets/js/main.js"></script>
 <script>
     async function loadComponent(id, path) {
         try {
@@ -50,7 +49,14 @@
         ]);
 
         // 2. Muat Script JS secara berurutan
-
+        const scripts = [
+            'assets/js/api.js',
+            'assets/js/auth.js',
+            'assets/js/main.js',
+            'assets/js/blog.js',
+            'assets/js/chat.js',
+            'assets/js/stats.js'
+        ];
         for (const src of scripts) {
             await new Promise(resolve => {
                 const s = document.createElement('script');
